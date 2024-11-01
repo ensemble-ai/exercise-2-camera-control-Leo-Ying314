@@ -1,51 +1,60 @@
-class_name PushBox
+class_name AutoScroll
 extends CameraControllerBase
 
-
-@export var box_width:float = 10.0
-@export var box_height:float = 10.0
-
+@export var box_width: float = 10.0
+@export var box_height: float = 10.0
+@export var autoscroll_speed: Vector3 = Vector3(5, 0, 0)
+@export var top_left: Vector2
+@export var bottom_right: Vector2
 
 func _ready() -> void:
 	super()
 	position = target.position
-	
+
 
 func _process(delta: float) -> void:
 	if !current:
 		global_position = target.global_position
 		return
-	
+		
 	if draw_camera_logic:
 		draw_logic()
+		
+	top_left = Vector2(
+		global_position.x - box_width, 
+		global_position.z - box_height / 2.0
+	)
+	
+	bottom_right = Vector2(
+		global_position.x + box_width,
+		global_position.z + box_height / 2.0
+	)
+	
+	# moves camera position based on autoscroll_speed vector
+	global_position.x += autoscroll_speed.x * delta
+	global_position.z += autoscroll_speed.z * delta # = 0
 	
 	var tpos = target.global_position
 	var cpos = global_position
 	
-	
-	
-	#boundary checks
-	#left
-	var diff_between_left_edges = (tpos.x - target.WIDTH / 2.0) - (cpos.x - box_width / 2.0)
+	# logic to keep target within bounds
+	var diff_between_left_edges = (tpos.x - target.WIDTH / 2.0) - top_left.x
 	if diff_between_left_edges < 0:
-		global_position.x += diff_between_left_edges
-	#right
-	var diff_between_right_edges = (tpos.x + target.WIDTH / 2.0) - (cpos.x + box_width / 2.0)
-	if diff_between_right_edges > 0:
-		global_position.x += diff_between_right_edges
-	#top
-	var diff_between_top_edges = (tpos.z - target.HEIGHT / 2.0) - (cpos.z - box_height / 2.0)
-	if diff_between_top_edges < 0:
-		global_position.z += diff_between_top_edges
-	#bottom
-	var diff_between_bottom_edges = (tpos.z + target.HEIGHT / 2.0) - (cpos.z + box_height / 2.0)
-	if diff_between_bottom_edges > 0:
-		global_position.z += diff_between_bottom_edges
-			
-	
+		target.global_position.x -= diff_between_left_edges
 		
+	var diff_between_right_edges = (tpos.x + target.WIDTH / 2.0) - bottom_right.x
+	if diff_between_right_edges > 0:
+		target.global_position.x = bottom_right.x - target.WIDTH / 2.0
+	
+	var diff_between_top_edges = (tpos.z - target.HEIGHT / 2.0) - top_left.y
+	if diff_between_top_edges < 0:
+		target.global_position.z = top_left.y + target.HEIGHT / 2.0
+		
+	var diff_between_bottom_edges = (tpos.z + target.HEIGHT / 2.0) - bottom_right.y
+	if diff_between_bottom_edges > 0:
+		target.global_position.z = bottom_right.y - target.HEIGHT / 2.0
+	
 	super(delta)
-
 
 func draw_logic() -> void:
 	var mesh_instance := MeshInstance3D.new()
@@ -55,8 +64,8 @@ func draw_logic() -> void:
 	mesh_instance.mesh = immediate_mesh
 	mesh_instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	
-	var left:float = -box_width / 2
-	var right:float = box_width / 2
+	var left:float = -box_width
+	var right:float = box_width
 	var top:float = -box_height / 2
 	var bottom:float = box_height / 2
 	
